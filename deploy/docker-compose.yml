@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:14-alpine
+    container_name: ai-novel-postgres
+    environment:
+      POSTGRES_DB: ai_novel_media
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ai-novel-network
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: ai-novel-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ai-novel-network
+
+  # 后端服务
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: ai-novel-backend
+    ports:
+      - "9000:9000"
+    environment:
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_API_BASE=https://api.deepseek.com/v1
+      - LLM_MODEL=deepseek-chat
+      - DATABASE_URL=postgresql://postgres:postgres123@postgres:5432/ai_novel_media
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ../backend:/app
+      - backend_data:/app/data
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - ai-novel-network
+    restart: unless-stopped
+
+  # 前端 - 用户端
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: ai-novel-frontend
+    ports:
+      - "8000:80"
+    networks:
+      - ai-novel-network
+    restart: unless-stopped
+
+  # 前端 - 管理后台
+  admin:
+    build:
+      context: ../admin
+      dockerfile: Dockerfile
+    container_name: ai-novel-admin
+    ports:
+      - "8001:80"
+    networks:
+      - ai-novel-network
+    restart: unless-stopped
+
+  # Nginx 反向代理
+  nginx:
+    image: nginx:alpine
+    container_name: ai-novel-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../official-site:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+      - frontend
+      - admin
+    networks:
+      - ai-novel-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  backend_data:
+
+networks:
+  ai-novel-network:
+    driver: bridge

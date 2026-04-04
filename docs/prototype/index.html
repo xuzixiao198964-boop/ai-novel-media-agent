@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 智能内容创作平台 — 原型设计</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
+.header{background:linear-gradient(135deg,#1e293b,#334155);padding:40px 20px;text-align:center;border-bottom:1px solid #475569}
+.header h1{font-size:2.2rem;background:linear-gradient(90deg,#38bdf8,#818cf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px}
+.header p{color:#94a3b8;font-size:1.1rem}
+.grid{max-width:1200px;margin:60px auto;padding:0 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px}
+.card{background:#1e293b;border:1px solid #334155;border-radius:16px;padding:32px;transition:all .3s;cursor:pointer;text-decoration:none;color:inherit;display:block}
+.card:hover{transform:translateY(-4px);border-color:#818cf8;box-shadow:0 8px 32px rgba(129,140,248,.15)}
+.card .icon{font-size:3rem;margin-bottom:16px}
+.card h2{font-size:1.3rem;margin-bottom:8px;color:#f1f5f9}
+.card p{color:#94a3b8;font-size:.95rem;line-height:1.6}
+.card .tag{display:inline-block;background:#334155;color:#818cf8;padding:4px 12px;border-radius:20px;font-size:.8rem;margin-top:12px}
+.footer{text-align:center;padding:40px;color:#64748b;font-size:.9rem}
+</style>
+</head>
+<body>
+<div class="header">
+<h1>AI 智能内容创作平台 — 原型设计</h1>
+<p>点击进入各端原型预览</p>
+</div>
+<div class="grid">
+<a class="card" href="official-site.html">
+<div class="icon">🌐</div>
+<h2>产品官网</h2>
+<p>平台宣传首页、功能介绍、定价方案、App 下载、API 文档、OpenClaw 接入指南</p>
+<span class="tag">Port 80</span>
+</a>
+<a class="card" href="web-app.html">
+<div class="icon">💻</div>
+<h2>用户端 Web 应用</h2>
+<p>任务创建、进度查看、小说/视频作品管理、套餐充值、广场浏览</p>
+<span class="tag">PC / 手机浏览器</span>
+</a>
+<a class="card" href="admin.html">
+<div class="icon">⚙️</div>
+<h2>后台管理系统</h2>
+<p>用户管理、作品审核、任务监控、API Key 管理、财务报表、系统配置</p>
+<span class="tag">管理员专用</span>
+</a>
+<a class="card" href="mobile-app.html">
+<div class="icon">📱</div>
+<h2>App 端</h2>
+<p>移动端原型，含首页、作品、创建、广场、个人中心五大 Tab</p>
+<span class="tag">Android / iOS</span>
+</a>
+</div>
+<div class="footer">
+AI 智能内容创作平台 &copy; 2026 | 原型仅供参考，实际产品以最终开发为准
+</div>
+</body>
+</html>

@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ainovel
+      POSTGRES_PASSWORD: ainovel
+      POSTGRES_DB: ai_novel_media
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  backend:
+    build: .
+    ports:
+      - "9000:9000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://ainovel:ainovel@postgres:5432/ai_novel_media
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./app:/app/app
+      - data_volume:/data
+    depends_on:
+      - postgres
+      - redis
+    command: uvicorn app.main:app --host 0.0.0.0 --port 9000 --reload
+
+  celery_worker:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+asyncpg://ainovel:ainovel@postgres:5432/ai_novel_media
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    volumes:
+      - ./app:/app/app
+      - data_volume:/data
+    depends_on:
+      - postgres
+      - redis
+    command: celery -A app.tasks worker --loglevel=info
+
+volumes:
+  postgres_data:
+  redis_data:
+  data_volume:

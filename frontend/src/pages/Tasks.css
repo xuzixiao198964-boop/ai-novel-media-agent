@@ -1,0 +1,42 @@
+.detail-card {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.detail-label {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.agent-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin: 16px 0;
+}
+
+.agent-table th,
+.agent-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.agent-table th {
+  background: #f8fafc;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.estimate-text {
+  margin-top: 12px;
+  font-size: 0.85rem;
+  color: #64748b;
+}

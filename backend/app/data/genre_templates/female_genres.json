@@ -1,0 +1,46 @@
+{
+  "genres": [
+    {
+      "id": "ancient_romance",
+      "name": "古代言情",
+      "description": "古代背景，宫廷情感",
+      "keywords": ["古代", "宫廷", "情感", "权谋", "嫡女"],
+      "conflict_types": ["宅斗", "宫斗", "情感纠葛", "家族恩怨"]
+    },
+    {
+      "id": "modern_romance",
+      "name": "现代言情",
+      "description": "现代都市，浪漫爱情",
+      "keywords": ["都市", "爱情", "职场", "豪门", "甜宠"],
+      "conflict_types": ["情敌竞争", "误会重重", "家族阻碍", "事业爱情"]
+    },
+    {
+      "id": "ceo",
+      "name": "霸总",
+      "description": "霸道总裁，甜宠文",
+      "keywords": ["霸总", "甜宠", "豪门", "契约", "宠溺"],
+      "conflict_types": ["身份差距", "前任纠缠", "商业联姻", "家族反对"]
+    },
+    {
+      "id": "mystery",
+      "name": "悬疑推理",
+      "description": "悬疑解谜，推理破案",
+      "keywords": ["悬疑", "推理", "破案", "真相", "智斗"],
+      "conflict_types": ["案件谜团", "幕后黑手", "生死危机", "真相揭露"]
+    },
+    {
+      "id": "pure_love",
+      "name": "纯爱",
+      "description": "纯真爱情，青春校园",
+      "keywords": ["纯爱", "校园", "青春", "初恋", "成长"],
+      "conflict_types": ["青春迷茫", "家庭压力", "学业爱情", "成长蜕变"]
+    },
+    {
+      "id": "palace",
+      "name": "宫斗",
+      "description": "后宫争斗，权谋智斗",
+      "keywords": ["宫斗", "后宫", "权谋", "嫔妃", "皇权"],
+      "conflict_types": ["后位之争", "宠爱争夺", "派系斗争", "生存博弈"]
+    }
+  ]
+}

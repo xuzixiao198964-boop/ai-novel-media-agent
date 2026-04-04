@@ -1,0 +1,12 @@
+{
+  "name": "official-site",
+  "version": "1.0.0",
+  "description": "AI创作平台产品官网",
+  "scripts": {
+    "start": "http-server . -p 80 -o",
+    "dev": "http-server . -p 8080 -o"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

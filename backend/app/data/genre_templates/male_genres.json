@@ -1,0 +1,46 @@
+{
+  "genres": [
+    {
+      "id": "xuanhuan",
+      "name": "玄幻",
+      "description": "东方玄幻，修炼体系，异世大陆",
+      "keywords": ["修炼", "境界", "功法", "灵气", "异兽"],
+      "conflict_types": ["实力差距", "宗门恩怨", "天才对决", "资源争夺"]
+    },
+    {
+      "id": "xianxia",
+      "name": "仙侠",
+      "description": "修仙世界，飞升成仙",
+      "keywords": ["修仙", "渡劫", "法宝", "仙界", "道法"],
+      "conflict_types": ["正邪对立", "门派之争", "天劫考验", "仙魔大战"]
+    },
+    {
+      "id": "military",
+      "name": "军事",
+      "description": "军旅生涯，战争策略",
+      "keywords": ["战争", "军队", "战术", "热血", "兄弟情"],
+      "conflict_types": ["战场对抗", "军事竞赛", "特种任务", "国际冲突"]
+    },
+    {
+      "id": "urban",
+      "name": "都市",
+      "description": "现代都市，商战情感",
+      "keywords": ["都市", "商业", "情感", "逆袭", "豪门"],
+      "conflict_types": ["商业竞争", "情感纠葛", "阶层跨越", "权力斗争"]
+    },
+    {
+      "id": "scifi",
+      "name": "科幻",
+      "description": "未来世界，星际探索",
+      "keywords": ["科技", "星际", "机甲", "AI", "未来"],
+      "conflict_types": ["星际战争", "科技竞赛", "文明冲突", "AI危机"]
+    },
+    {
+      "id": "history",
+      "name": "历史",
+      "description": "历史架空，权谋争霸",
+      "keywords": ["历史", "权谋", "战争", "朝堂", "江山"],
+      "conflict_types": ["朝堂争斗", "战争征伐", "权力更迭", "民族矛盾"]
+    }
+  ]
+}
