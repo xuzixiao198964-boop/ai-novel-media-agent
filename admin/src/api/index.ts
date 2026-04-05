@@ -4,6 +4,8 @@ export const dashboardApi = {
   getStats: () => client.get('/admin/dashboard'),
   getIncomeTrend: (days = 30) => client.get(`/admin/dashboard/income-trend?days=${days}`),
   getRecentUsers: (limit = 5) => client.get(`/admin/dashboard/recent-users?limit=${limit}`),
+  getTaskDistribution: () => client.get('/admin/dashboard/task-distribution'),
+  getSubscriptionDistribution: () => client.get('/admin/dashboard/subscription-distribution'),
 }
 
 export const usersApi = {

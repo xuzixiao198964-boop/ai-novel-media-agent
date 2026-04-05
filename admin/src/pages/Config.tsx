@@ -22,6 +22,18 @@ export default function Config() {
     publish_mode: 'mock',
   })
 
+  // API密钥配置
+  const [apiKeys, setApiKeys] = useState({
+    openai_api_key: '',
+    openai_base_url: 'https://api.openai.com/v1',
+    video_api_key: '',
+    video_api_url: '',
+    tts_api_key: '',
+    tts_api_url: '',
+    image_api_key: '',
+    image_api_url: '',
+  })
+
   useEffect(() => {
     loadConfigs()
   }, [])
@@ -37,6 +49,9 @@ export default function Config() {
       }
       if (data.system_params) {
         setSystemParams(data.system_params.value)
+      }
+      if (data.api_keys) {
+        setApiKeys(data.api_keys.value)
       }
     } catch (error) {
       console.error('加载配置失败:', error)
@@ -70,6 +85,22 @@ export default function Config() {
         description: '系统参数配置',
       })
       alert('系统参数已保存')
+    } catch (error) {
+      alert('保存失败')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSaveApiKeys = async () => {
+    setSaving(true)
+    try {
+      await configApi.update({
+        key: 'api_keys',
+        value: apiKeys,
+        description: 'API密钥配置',
+      })
+      alert('API密钥已保存')
     } catch (error) {
       alert('保存失败')
     } finally {
@@ -191,7 +222,7 @@ export default function Config() {
       </div>
 
       {/* 系统参数 */}
-      <div className="bg-white rounded-xl p-6 border border-gray-200">
+      <div className="bg-white rounded-xl p-6 border border-gray-200 mb-4">
         <h2 className="text-lg font-semibold mb-4">系统参数</h2>
         <div className="space-y-4 max-w-md">
           <div>
@@ -261,6 +292,168 @@ export default function Config() {
             className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
           >
             {saving ? '保存中...' : '保存配置'}
+          </button>
+        </div>
+      </div>
+
+      {/* API密钥配置 */}
+      <div className="bg-white rounded-xl p-6 border border-gray-200">
+        <h2 className="text-lg font-semibold mb-4">API密钥配置</h2>
+        <div className="space-y-6 max-w-2xl">
+          {/* OpenAI配置 */}
+          <div className="border-b border-gray-200 pb-4">
+            <h3 className="text-md font-medium text-gray-900 mb-3">OpenAI (小说生成)</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  API Key
+                </label>
+                <input
+                  type="password"
+                  value={apiKeys.openai_api_key}
+                  onChange={(e) => setApiKeys({
+                    ...apiKeys,
+                    openai_api_key: e.target.value
+                  })}
+                  placeholder="sk-..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Base URL
+                </label>
+                <input
+                  type="text"
+                  value={apiKeys.openai_base_url}
+                  onChange={(e) => setApiKeys({
+                    ...apiKeys,
+                    openai_base_url: e.target.value
+                  })}
+                  placeholder="https://api.openai.com/v1"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 视频生成配置 */}
+          <div className="border-b border-gray-200 pb-4">
+            <h3 className="text-md font-medium text-gray-900 mb-3">视频生成服务</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  API Key
+                </label>
+                <input
+                  type="password"
+                  value={apiKeys.video_api_key}
+                  onChange={(e) => setApiKeys({
+                    ...apiKeys,
+                    video_api_key: e.target.value
+                  })}
+                  placeholder="输入视频生成API密钥"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  API URL
+                </label>
+                <input
+                  type="text"
+                  value={apiKeys.video_api_url}
+                  onChange={(e) => setApiKeys({
+                    ...apiKeys,
+                    video_api_url: e.target.value
+                  })}
+                  placeholder="https://api.example.com/video"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 语音合成配置 */}
+          <div className="border-b border-gray-200 pb-4">
+            <h3 className="text-md font-medium text-gray-900 mb-3">语音合成服务 (TTS)</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  API Key
+                </label>
+                <input
+                  type="password"
+                  value={apiKeys.tts_api_key}
+                  onChange={(e) => setApiKeys({
+                    ...apiKeys,
+                    tts_api_key: e.target.value
+                  })}
+                  placeholder="输入语音合成API密钥"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  API URL
+                </label>
+                <input
+                  type="text"
+                  value={apiKeys.tts_api_url}
+                  onChange={(e) => setApiKeys({
+                    ...apiKeys,
+                    tts_api_url: e.target.value
+                  })}
+                  placeholder="https://api.example.com/tts"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 图片生成配置 */}
+          <div className="pb-4">
+            <h3 className="text-md font-medium text-gray-900 mb-3">图片生成服务</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  API Key
+                </label>
+                <input
+                  type="password"
+                  value={apiKeys.image_api_key}
+                  onChange={(e) => setApiKeys({
+                    ...apiKeys,
+                    image_api_key: e.target.value
+                  })}
+                  placeholder="输入图片生成API密钥"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  API URL
+                </label>
+                <input
+                  type="text"
+                  value={apiKeys.image_api_url}
+                  onChange={(e) => setApiKeys({
+                    ...apiKeys,
+                    image_api_url: e.target.value
+                  })}
+                  placeholder="https://api.example.com/image"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={handleSaveApiKeys}
+            disabled={saving}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {saving ? '保存中...' : '保存API密钥'}
           </button>
         </div>
       </div>

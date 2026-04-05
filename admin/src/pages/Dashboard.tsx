@@ -1,13 +1,17 @@
 import { useEffect, useState } from 'react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, Legend } from 'recharts'
 import { dashboardApi } from '../api'
 import { useAuthStore } from '../store/auth'
+
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
 
 export default function Dashboard() {
   const { username, logout } = useAuthStore()
   const [stats, setStats] = useState<any>(null)
   const [incomeTrend, setIncomeTrend] = useState<any[]>([])
   const [recentUsers, setRecentUsers] = useState<any[]>([])
+  const [taskDistribution, setTaskDistribution] = useState<any[]>([])
+  const [subscriptionDistribution, setSubscriptionDistribution] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -16,14 +20,18 @@ export default function Dashboard() {
 
   const loadData = async () => {
     try {
-      const [statsData, trendData, usersData] = await Promise.all([
+      const [statsData, trendData, usersData, taskDist, subDist] = await Promise.all([
         dashboardApi.getStats(),
         dashboardApi.getIncomeTrend(30),
         dashboardApi.getRecentUsers(5),
-      ]) as unknown as [any, any[], any[]]
+        dashboardApi.getTaskDistribution(),
+        dashboardApi.getSubscriptionDistribution(),
+      ]) as unknown as [any, any[], any[], any[], any[]]
       setStats(statsData)
       setIncomeTrend(trendData)
       setRecentUsers(usersData)
+      setTaskDistribution(taskDist)
+      setSubscriptionDistribution(subDist)
     } catch (error) {
       console.error('加载数据失败:', error)
     } finally {
@@ -59,37 +67,37 @@ export default function Dashboard() {
       <div className="grid grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-xl p-5 border border-gray-200">
           <div className="text-[0.8rem] text-slate-600 mb-1">用户总数</div>
-          <div className="text-[2rem] font-bold">{stats?.total_users || 12345}</div>
+          <div className="text-[2rem] font-bold">{stats?.total_users || 0}</div>
           <div className="text-[0.75rem] text-green-600 mt-1">
-            +{stats?.today_new_users || 156} 今日注册
+            +{stats?.today_new_users || 0} 今日注册
           </div>
         </div>
 
         <div className="bg-white rounded-xl p-5 border border-gray-200">
           <div className="text-[0.8rem] text-slate-600 mb-1">活跃任务</div>
-          <div className="text-[2rem] font-bold">{stats?.active_tasks || 89}</div>
+          <div className="text-[2rem] font-bold">{stats?.active_tasks || 0}</div>
           <div className="text-[0.75rem] text-yellow-600 mt-1">
-            排队: {stats?.queued_tasks || 34}
+            排队: {stats?.queued_tasks || 0}
           </div>
         </div>
 
         <div className="bg-white rounded-xl p-5 border border-gray-200">
           <div className="text-[0.8rem] text-slate-600 mb-1">今日收入</div>
           <div className="text-[2rem] font-bold text-green-600">
-            ¥{stats?.today_income?.toFixed(0) || '8,920'}
+            ¥{stats?.today_income?.toFixed(0) || 0}
           </div>
           <div className="text-[0.75rem] text-green-600 mt-1">
-            +{stats?.income_change?.toFixed(0) || 12}% 较昨日
+            {stats?.income_change >= 0 ? '+' : ''}{stats?.income_change?.toFixed(0) || 0}% 较昨日
           </div>
         </div>
 
         <div className="bg-white rounded-xl p-5 border border-gray-200">
           <div className="text-[0.8rem] text-slate-600 mb-1">作品总数</div>
           <div className="text-[2rem] font-bold">
-            {(stats?.total_novels || 28000) + (stats?.total_videos || 17000)}
+            {(stats?.total_novels || 0) + (stats?.total_videos || 0)}
           </div>
           <div className="text-[0.75rem] text-slate-600 mt-1">
-            小说: {(stats?.total_novels || 28000) / 1000}K | 视频: {(stats?.total_videos || 17000) / 1000}K
+            小说: {stats?.total_novels || 0} | 视频: {stats?.total_videos || 0}
           </div>
         </div>
       </div>
@@ -117,9 +125,31 @@ export default function Dashboard() {
 
         <div className="bg-white rounded-xl p-6 border border-gray-200">
           <h2 className="text-[1.1rem] font-semibold mb-4 text-slate-700">任务类型分布</h2>
-          <div className="h-[200px] bg-slate-50 border border-dashed border-slate-300 rounded-lg flex items-center justify-center text-slate-400 text-[0.9rem]">
-            🍩 饼图
-          </div>
+          {taskDistribution.length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <PieChart>
+                <Pie
+                  data={taskDistribution}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {taskDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[200px] bg-slate-50 border border-dashed border-slate-300 rounded-lg flex items-center justify-center text-slate-400 text-[0.9rem]">
+              暂无数据
+            </div>
+          )}
         </div>
       </div>
 
@@ -127,9 +157,21 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white rounded-xl p-6 border border-gray-200">
           <h2 className="text-[1.1rem] font-semibold mb-4 text-slate-700">套餐分布</h2>
-          <div className="h-[200px] bg-slate-50 border border-dashed border-slate-300 rounded-lg flex items-center justify-center text-slate-400 text-[0.9rem]">
-            📊 柱状图
-          </div>
+          {subscriptionDistribution.length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={subscriptionDistribution}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Bar dataKey="value" fill="#3b82f6" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[200px] bg-slate-50 border border-dashed border-slate-300 rounded-lg flex items-center justify-center text-slate-400 text-[0.9rem]">
+              暂无数据
+            </div>
+          )}
         </div>
 
         <div className="bg-white rounded-xl p-6 border border-gray-200">
