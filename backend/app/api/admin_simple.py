@@ -39,6 +39,60 @@ def get_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
         "created_at": u.created_at.isoformat() if u.created_at else None
     } for u in users]
 
+@router.get("/novels")
+def get_novels(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    """获取小说列表"""
+    novels = db.query(Novel).offset(skip).limit(limit).all()
+    return [{
+        "id": n.id,
+        "title": n.title,
+        "genre": n.genre,
+        "status": n.status,
+        "word_count": n.word_count,
+        "created_at": n.created_at.isoformat() if n.created_at else None
+    } for n in novels]
+
+@router.get("/videos")
+def get_videos(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    """获取视频列表"""
+    videos = db.query(Video).offset(skip).limit(limit).all()
+    return [{
+        "id": v.id,
+        "title": v.title,
+        "status": v.status,
+        "duration": v.duration,
+        "created_at": v.created_at.isoformat() if v.created_at else None
+    } for v in videos]
+
+@router.get("/tasks/stats")
+def get_task_stats(db: Session = Depends(get_db)):
+    """获取任务统计"""
+    total = db.query(Task).count()
+    pending = db.query(Task).filter(Task.status == "pending").count()
+    running = db.query(Task).filter(Task.status == "running").count()
+    completed = db.query(Task).filter(Task.status == "completed").count()
+    failed = db.query(Task).filter(Task.status == "failed").count()
+
+    return {
+        "total": total,
+        "pending": pending,
+        "running": running,
+        "completed": completed,
+        "failed": failed
+    }
+
+@router.get("/tasks")
+def get_tasks(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    """获取任务列表"""
+    tasks = db.query(Task).offset(skip).limit(limit).all()
+    return [{
+        "id": t.id,
+        "type": t.type,
+        "status": t.status,
+        "progress": t.progress,
+        "created_at": t.created_at.isoformat() if t.created_at else None
+    } for t in tasks]
+
 @router.get("/api-keys")
 def get_api_keys(db: Session = Depends(get_db)):
     """获取API密钥列表"""
@@ -64,9 +118,18 @@ def get_finance_trend(days: int = 30, db: Session = Depends(get_db)):
     """获取财务趋势"""
     return []
 
-# 发布管理
-@router.get("/publish/records")
+@router.get("/publish")
 def get_publish_records(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """获取发布记录"""
     return []
+
+@router.get("/config")
+def get_config(db: Session = Depends(get_db)):
+    """获取系统配置"""
+    return {
+        "site_name": "AI小说媒体平台",
+        "api_enabled": True,
+        "max_concurrent_tasks": 10,
+        "storage_path": "/data/storage"
+    }
 

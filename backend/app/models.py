@@ -148,7 +148,7 @@ class SystemLog(Base):
     module = Column(String(100))
     message = Column(Text)
     user_id = Column(Integer, ForeignKey("users.id"))
-    metadata = Column(JSON)
+    log_metadata = Column(JSON)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class SystemConfig(Base):
