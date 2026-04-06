@@ -24,14 +24,15 @@ export default function Config() {
 
   // API密钥配置
   const [apiKeys, setApiKeys] = useState({
-    openai_api_key: '',
-    openai_base_url: 'https://api.openai.com/v1',
-    video_api_key: '',
-    video_api_url: '',
-    tts_api_key: '',
-    tts_api_url: '',
+    deepseek_api_key: '',
+    deepseek_base_url: 'https://api.deepseek.com/v1',
     image_api_key: '',
-    image_api_url: '',
+    image_api_url: 'https://api.siliconflow.cn/v1',
+    tts_secret_id: '',
+    tts_secret_key: '',
+    tts_region: 'ap-guangzhou',
+    video_api_key: '',
+    video_api_url: 'https://api.siliconflow.cn/v1',
   })
 
   useEffect(() => {
@@ -297,12 +298,12 @@ export default function Config() {
       </div>
 
       {/* API密钥配置 */}
-      <div className="bg-white rounded-xl p-6 border border-gray-200">
-        <h2 className="text-lg font-semibold mb-4">API密钥配置</h2>
+      <div className="bg-white rounded-xl p-6 border border-gray-200 mb-4" style={{ minHeight: '400px' }}>
+        <h2 className="text-lg font-semibold mb-4 text-red-600">🔑 API密钥配置</h2>
         <div className="space-y-6 max-w-2xl">
-          {/* OpenAI配置 */}
+          {/* DeepSeek配置 */}
           <div className="border-b border-gray-200 pb-4">
-            <h3 className="text-md font-medium text-gray-900 mb-3">OpenAI (小说生成)</h3>
+            <h3 className="text-md font-medium text-gray-900 mb-3">DeepSeek (小说生成)</h3>
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -310,10 +311,10 @@ export default function Config() {
                 </label>
                 <input
                   type="password"
-                  value={apiKeys.openai_api_key}
+                  value={apiKeys.deepseek_api_key}
                   onChange={(e) => setApiKeys({
                     ...apiKeys,
-                    openai_api_key: e.target.value
+                    deepseek_api_key: e.target.value
                   })}
                   placeholder="sk-..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
@@ -325,95 +326,21 @@ export default function Config() {
                 </label>
                 <input
                   type="text"
-                  value={apiKeys.openai_base_url}
+                  value={apiKeys.deepseek_base_url}
                   onChange={(e) => setApiKeys({
                     ...apiKeys,
-                    openai_base_url: e.target.value
+                    deepseek_base_url: e.target.value
                   })}
-                  placeholder="https://api.openai.com/v1"
+                  placeholder="https://api.deepseek.com/v1"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                 />
               </div>
             </div>
           </div>
 
-          {/* 视频生成配置 */}
+          {/* 硅基流动图片生成配置 */}
           <div className="border-b border-gray-200 pb-4">
-            <h3 className="text-md font-medium text-gray-900 mb-3">视频生成服务</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  API Key
-                </label>
-                <input
-                  type="password"
-                  value={apiKeys.video_api_key}
-                  onChange={(e) => setApiKeys({
-                    ...apiKeys,
-                    video_api_key: e.target.value
-                  })}
-                  placeholder="输入视频生成API密钥"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  API URL
-                </label>
-                <input
-                  type="text"
-                  value={apiKeys.video_api_url}
-                  onChange={(e) => setApiKeys({
-                    ...apiKeys,
-                    video_api_url: e.target.value
-                  })}
-                  placeholder="https://api.example.com/video"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 语音合成配置 */}
-          <div className="border-b border-gray-200 pb-4">
-            <h3 className="text-md font-medium text-gray-900 mb-3">语音合成服务 (TTS)</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  API Key
-                </label>
-                <input
-                  type="password"
-                  value={apiKeys.tts_api_key}
-                  onChange={(e) => setApiKeys({
-                    ...apiKeys,
-                    tts_api_key: e.target.value
-                  })}
-                  placeholder="输入语音合成API密钥"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  API URL
-                </label>
-                <input
-                  type="text"
-                  value={apiKeys.tts_api_url}
-                  onChange={(e) => setApiKeys({
-                    ...apiKeys,
-                    tts_api_url: e.target.value
-                  })}
-                  placeholder="https://api.example.com/tts"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 图片生成配置 */}
-          <div className="pb-4">
-            <h3 className="text-md font-medium text-gray-900 mb-3">图片生成服务</h3>
+            <h3 className="text-md font-medium text-gray-900 mb-3">硅基流动 (图片生成)</h3>
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -426,7 +353,7 @@ export default function Config() {
                     ...apiKeys,
                     image_api_key: e.target.value
                   })}
-                  placeholder="输入图片生成API密钥"
+                  placeholder="输入硅基流动API密钥"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                 />
               </div>
@@ -441,7 +368,99 @@ export default function Config() {
                     ...apiKeys,
                     image_api_url: e.target.value
                   })}
-                  placeholder="https://api.example.com/image"
+                  placeholder="https://api.siliconflow.cn/v1"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 腾讯云TTS配置 */}
+          <div className="border-b border-gray-200 pb-4">
+            <h3 className="text-md font-medium text-gray-900 mb-3">腾讯云 (语音合成)</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  SecretId
+                </label>
+                <input
+                  type="password"
+                  value={apiKeys.tts_secret_id}
+                  onChange={(e) => setApiKeys({
+                    ...apiKeys,
+                    tts_secret_id: e.target.value
+                  })}
+                  placeholder="输入腾讯云SecretId"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  SecretKey
+                </label>
+                <input
+                  type="password"
+                  value={apiKeys.tts_secret_key}
+                  onChange={(e) => setApiKeys({
+                    ...apiKeys,
+                    tts_secret_key: e.target.value
+                  })}
+                  placeholder="输入腾讯云SecretKey"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Region (地域)
+                </label>
+                <select
+                  value={apiKeys.tts_region}
+                  onChange={(e) => setApiKeys({
+                    ...apiKeys,
+                    tts_region: e.target.value
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                >
+                  <option value="ap-guangzhou">广州 (ap-guangzhou)</option>
+                  <option value="ap-beijing">北京 (ap-beijing)</option>
+                  <option value="ap-shanghai">上海 (ap-shanghai)</option>
+                  <option value="ap-chengdu">成都 (ap-chengdu)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* 硅基流动视频生成配置 */}
+          <div className="pb-4">
+            <h3 className="text-md font-medium text-gray-900 mb-3">硅基流动 (视频生成)</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  API Key
+                </label>
+                <input
+                  type="password"
+                  value={apiKeys.video_api_key}
+                  onChange={(e) => setApiKeys({
+                    ...apiKeys,
+                    video_api_key: e.target.value
+                  })}
+                  placeholder="输入硅基流动API密钥"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  API URL
+                </label>
+                <input
+                  type="text"
+                  value={apiKeys.video_api_url}
+                  onChange={(e) => setApiKeys({
+                    ...apiKeys,
+                    video_api_url: e.target.value
+                  })}
+                  placeholder="https://api.siliconflow.cn/v1"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                 />
               </div>

@@ -10,6 +10,14 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        format: 'iife',
+        manualChunks: undefined,
+      },
+    },
+  },
   server: {
     port: 3001,
     proxy: {

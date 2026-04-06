@@ -176,6 +176,40 @@ const CreateTask = () => {
                 </div>
               </div>
             )}
+
+            {novelConfig.category === 'female' && (
+              <div className="form-group">
+                <label>女频子分类 (可多选)</label>
+                <div className="options">
+                  {['古代言情', '现代言情', '霸总', '悬疑推理', '纯爱', '宫斗/宅斗', '穿越重生', '职场', '甜宠', '虐文', '🎲 随机'].map(sub => (
+                    <div
+                      key={sub}
+                      className={`option ${novelConfig.subCategories.includes(sub) ? 'selected' : ''}`}
+                      onClick={() => toggleSubCategory(sub)}
+                    >
+                      {sub}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {novelConfig.category === 'children' && (
+              <div className="form-group">
+                <label>儿童故事子分类 (可多选)</label>
+                <div className="options">
+                  {['0-3岁启蒙', '3-6岁童话', '6-9岁冒险', '9-12岁成长', '12+青少年', '🎲 随机'].map(sub => (
+                    <div
+                      key={sub}
+                      className={`option ${novelConfig.subCategories.includes(sub) ? 'selected' : ''}`}
+                      onClick={() => toggleSubCategory(sub)}
+                    >
+                      {sub}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -211,6 +245,12 @@ const CreateTask = () => {
                   onClick={() => setVideoConfig({ ...videoConfig, enableVoice: !videoConfig.enableVoice })}
                 >
                   启用语音
+                </div>
+                <div
+                  className={`option ${videoConfig.lipSync ? 'selected' : ''}`}
+                  onClick={() => setVideoConfig({ ...videoConfig, lipSync: !videoConfig.lipSync })}
+                >
+                  口型同步
                 </div>
                 <div
                   className={`option ${videoConfig.enableSubtitle ? 'selected' : ''}`}

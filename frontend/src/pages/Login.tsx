@@ -1,13 +1,20 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 
 const Login = () => {
   const navigate = useNavigate()
-  const { login, isLoading } = useAuthStore()
+  const { login, isLoading, isAuthenticated } = useAuthStore()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+
+  // 如果已经登录，重定向到首页
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/', { replace: true })
+    }
+  }, [isAuthenticated, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -15,7 +22,7 @@ const Login = () => {
 
     try {
       await login(username, password)
-      navigate('/')
+      // login成功后，isAuthenticated会变为true，触发useEffect中的导航
     } catch (err: any) {
       setError(err.response?.data?.message || '登录失败，请检查用户名和密码')
     }

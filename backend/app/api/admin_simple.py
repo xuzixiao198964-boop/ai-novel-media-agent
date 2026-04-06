@@ -22,38 +22,43 @@ class ConfigUpdate(BaseModel):
 
 @router.get("/dashboard")
 def get_dashboard(db: Session = Depends(get_db)):
-    """获取仪表盘数据"""
+    """获取仪表盘数据 - 显示真实数据库统计"""
+    # 用户统计
     total_users = db.query(User).count()
-    total_tasks = db.query(Task).count()
-    total_novels = db.query(Novel).count()
-    total_videos = db.query(Video).count()
 
-    # 今日新增
+    # 今日新增用户
     today = datetime.now().date()
-    today_new_users = db.query(User).filter(User.created_at >= today).count()
+    today_start = datetime.combine(today, datetime.min.time())
+    today_new_users = db.query(User).filter(User.created_at >= today_start).count()
 
-    # 活跃任务（运行中+排队中）
+    # 活跃任务（运行中+排队中）- 与任务监控页面一致
     active_tasks = db.query(Task).filter(Task.status.in_(["pending", "running"])).count()
     queued_tasks = db.query(Task).filter(Task.status == "pending").count()
 
+    # 作品总数 - 与小说管理、视频管理页面一致
+    total_novels = db.query(Novel).count()
+    total_videos = db.query(Video).count()
+
     # 今日收入（从支付表统计）
     today_payments = db.query(Payment).filter(
-        Payment.created_at >= today,
+        Payment.created_at >= today_start,
         Payment.status == "completed"
     ).all()
-    today_income = sum(p.amount for p in today_payments)
+    today_income = sum(p.amount for p in today_payments) if today_payments else 0.0
 
     # 昨日收入
     yesterday = today - timedelta(days=1)
+    yesterday_start = datetime.combine(yesterday, datetime.min.time())
+    yesterday_end = datetime.combine(yesterday, datetime.max.time())
     yesterday_payments = db.query(Payment).filter(
-        Payment.created_at >= yesterday,
-        Payment.created_at < today,
+        Payment.created_at >= yesterday_start,
+        Payment.created_at <= yesterday_end,
         Payment.status == "completed"
     ).all()
-    yesterday_income = sum(p.amount for p in yesterday_payments)
+    yesterday_income = sum(p.amount for p in yesterday_payments) if yesterday_payments else 0.0
 
     # 收入变化百分比
-    income_change = 0
+    income_change = 0.0
     if yesterday_income > 0:
         income_change = ((today_income - yesterday_income) / yesterday_income) * 100
 
@@ -62,8 +67,8 @@ def get_dashboard(db: Session = Depends(get_db)):
         "today_new_users": today_new_users,
         "active_tasks": active_tasks,
         "queued_tasks": queued_tasks,
-        "today_income": today_income,
-        "income_change": income_change,
+        "today_income": float(today_income),
+        "income_change": float(income_change),
         "total_novels": total_novels,
         "total_videos": total_videos
     }

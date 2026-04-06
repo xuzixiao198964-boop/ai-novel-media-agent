@@ -17,6 +17,8 @@ export default function Login() {
     try {
       const response = await authApi.login(username, password) as any
       login(username, response.access_token)
+      // 强制刷新页面，让App重新初始化并读取localStorage
+      window.location.reload()
     } catch (err: any) {
       setError(err.response?.data?.detail || '登录失败，请检查用户名和密码')
     } finally {

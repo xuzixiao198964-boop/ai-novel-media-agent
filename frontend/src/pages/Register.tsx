@@ -6,7 +6,6 @@ const Register = () => {
   const navigate = useNavigate();
   const { register, isLoading } = useAuthStore();
   const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
@@ -26,7 +25,7 @@ const Register = () => {
     }
 
     try {
-      await register(username, email, password);
+      await register(username, '', password);
       navigate('/');
     } catch (err: any) {
       setError(err.response?.data?.message || '注册失败，请稍后重试');
@@ -59,17 +58,6 @@ const Register = () => {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="请输入用户名"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label>邮箱</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="请输入邮箱"
               required
             />
           </div>
