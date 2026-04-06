@@ -12,10 +12,14 @@ export const register = async (data: {
 
 // 登录
 export const login = async (data: {
-  email: string;
+  username: string;
   password: string;
 }): Promise<{ token: string; user: User }> => {
-  return client.post('/auth/login', data);
+  const response: any = await client.post('/auth/login', data);
+  return {
+    token: response.access_token,
+    user: response.user || { username: data.username }
+  };
 };
 
 // 获取当前用户信息

@@ -1,170 +1,192 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""完整验证所有功能"""
+"""最终验证所有功能"""
 
-import requests
+import paramiko
 import json
-import sys
-import io
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+SERVER = "104.244.90.202"
+USERNAME = "root"
+PASSWORD = "vDyCuc83NxWw"
 
-BASE_URL = "http://104.244.90.202:9000"
-ADMIN_URL = "http://104.244.90.202/admin"
-
-def test_api(method, endpoint, data=None, description="", expect_status=200):
-    """测试API接口"""
-    url = f"{BASE_URL}{endpoint}"
-
+def test_api(ssh, name, cmd, check_func):
+    """测试API并验证结果"""
+    stdin, stdout, stderr = ssh.exec_command(cmd)
+    result = stdout.read().decode()
     try:
-        if method == "GET":
-            response = requests.get(url, timeout=10)
-        elif method == "POST":
-            response = requests.post(url, json=data, timeout=10)
-        elif method == "PATCH":
-            response = requests.patch(url, json=data, timeout=10)
-        elif method == "DELETE":
-            response = requests.delete(url, timeout=10)
-
-        success = response.status_code == expect_status
-        status_icon = "✓" if success else "✗"
-
-        return {
-            "description": description,
-            "method": method,
-            "endpoint": endpoint,
-            "status_code": response.status_code,
-            "success": success,
-            "icon": status_icon
-        }
-
-    except Exception as e:
-        return {
-            "description": description,
-            "method": method,
-            "endpoint": endpoint,
-            "status_code": 0,
-            "success": False,
-            "icon": "✗",
-            "error": str(e)
-        }
-
-def main():
-    print("="*80)
-    print("管理后台完整验证报告")
-    print("="*80)
-
-    results = []
-
-    print("\n【1. 核心管理接口】")
-    tests = [
-        ("GET", "/api/admin/dashboard", None, "Dashboard数据概览", 200),
-        ("GET", "/api/admin/users", None, "用户列表", 200),
-        ("GET", "/api/admin/novels", None, "小说列表", 200),
-        ("GET", "/api/admin/videos", None, "视频列表", 200),
-        ("GET", "/api/admin/tasks", None, "任务列表", 200),
-        ("GET", "/api/admin/api-keys", None, "API密钥列表", 200),
-        ("GET", "/api/admin/logs", None, "系统日志", 200),
-        ("GET", "/api/admin/publish", None, "发布记录", 200),
-    ]
-
-    for method, endpoint, data, desc, expect in tests:
-        result = test_api(method, endpoint, data, desc, expect)
-        results.append(result)
-        print(f"  {result['icon']} {desc}: {result['status_code']}")
-
-    print("\n【2. 数据统计接口】")
-    tests = [
-        ("GET", "/api/admin/dashboard/task-distribution", None, "任务类型分布", 200),
-        ("GET", "/api/admin/dashboard/subscription-distribution", None, "套餐分布", 200),
-        ("GET", "/api/admin/dashboard/income-trend", None, "收入趋势", 200),
-        ("GET", "/api/admin/dashboard/recent-users", None, "最近用户", 200),
-        ("GET", "/api/admin/tasks/stats", None, "任务统计", 200),
-        ("GET", "/api/admin/finance/summary", None, "财务汇总", 200),
-        ("GET", "/api/admin/finance/trend", None, "财务趋势", 200),
-    ]
-
-    for method, endpoint, data, desc, expect in tests:
-        result = test_api(method, endpoint, data, desc, expect)
-        results.append(result)
-        print(f"  {result['icon']} {desc}: {result['status_code']}")
-
-    print("\n【3. 操作接口（POST/PATCH/DELETE）】")
-    tests = [
-        ("PATCH", "/api/admin/novels/2/status", {"status": "draft"}, "更新小说状态", 200),
-        ("PATCH", "/api/admin/videos/2/status", {"status": "draft"}, "更新视频状态", 200),
-    ]
-
-    for method, endpoint, data, desc, expect in tests:
-        result = test_api(method, endpoint, data, desc, expect)
-        results.append(result)
-        print(f"  {result['icon']} {desc}: {result['status_code']}")
-
-    print("\n【4. 前端页面访问】")
-    try:
-        response = requests.get(ADMIN_URL, timeout=10)
-        page_size = len(response.text)
-        has_root_div = '<div id="root"></div>' in response.text
-        has_script = '<script' in response.text
-
-        if response.status_code == 200 and has_root_div and has_script:
-            print(f"  ✓ 管理后台首页: {response.status_code} (页面大小: {page_size} bytes)")
-            frontend_ok = True
+        if check_func(result):
+            print(f"[PASS] {name}")
+            return True
         else:
-            print(f"  ✗ 管理后台首页: {response.status_code} (页面大小: {page_size} bytes)")
-            print(f"    - 包含root div: {has_root_div}")
-            print(f"    - 包含script: {has_script}")
-            frontend_ok = False
+            print(f"[FAIL] {name}: {result[:200]}")
+            return False
     except Exception as e:
-        print(f"  ✗ 管理后台首页: 访问失败 - {e}")
-        frontend_ok = False
-
-    # 统计结果
-    print("\n" + "="*80)
-    print("验证结果汇总")
-    print("="*80)
-
-    passed = sum(1 for r in results if r['success'])
-    total = len(results)
-
-    print(f"\nAPI接口测试: {passed}/{total} 通过")
-    print(f"前端页面: {'✓ 正常' if frontend_ok else '✗ 异常'}")
-
-    print("\n【失败的接口】")
-    failed = [r for r in results if not r['success']]
-    if failed:
-        for r in failed:
-            print(f"  ✗ {r['description']}: {r['method']} {r['endpoint']} - {r['status_code']}")
-            if 'error' in r:
-                print(f"    错误: {r['error']}")
-    else:
-        print("  无")
-
-    print("\n【数据库统计】")
-    try:
-        dashboard = requests.get(f"{BASE_URL}/api/admin/dashboard", timeout=10).json()
-        print(f"  - 总用户数: {dashboard.get('total_users', 0)}")
-        print(f"  - 总小说数: {dashboard.get('total_novels', 0)}")
-        print(f"  - 总视频数: {dashboard.get('total_videos', 0)}")
-        print(f"  - 总任务数: {dashboard.get('total_users', 0)}")
-        print(f"  - 活跃任务: {dashboard.get('active_tasks', 0)}")
-        print(f"  - 今日收入: ¥{dashboard.get('today_income', 0)}")
-    except:
-        print("  无法获取统计数据")
-
-    print("\n" + "="*80)
-    if passed == total and frontend_ok:
-        print("✓ 所有功能验证通过！管理后台已完全部署成功！")
-        print("="*80)
-        print(f"\n访问地址: {ADMIN_URL}")
-        print("登录账号: admin / 198964")
-        print("         15606537209 / 198964")
-        return True
-    else:
-        print(f"✗ 有 {total - passed} 个接口测试失败")
-        print("="*80)
+        print(f"[FAIL] {name}: {e}")
         return False
 
+def main():
+    print("="*60)
+    print("最终验证报告")
+    print("="*60)
+
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    try:
+        ssh.connect(SERVER, username=USERNAME, password=PASSWORD, timeout=10)
+        print("[OK] 连接服务器成功\n")
+
+        results = []
+
+        # 1. Dashboard数据概览
+        print("[1] Dashboard数据概览")
+        results.append(test_api(
+            ssh,
+            "用户总数 > 0",
+            "curl -s http://localhost:9000/api/admin/dashboard",
+            lambda r: json.loads(r).get("total_users", 0) > 0
+        ))
+        results.append(test_api(
+            ssh,
+            "活跃任务数据",
+            "curl -s http://localhost:9000/api/admin/dashboard",
+            lambda r: "active_tasks" in r
+        ))
+        results.append(test_api(
+            ssh,
+            "今日收入数据",
+            "curl -s http://localhost:9000/api/admin/dashboard",
+            lambda r: "today_income" in r
+        ))
+        results.append(test_api(
+            ssh,
+            "作品总数数据",
+            "curl -s http://localhost:9000/api/admin/dashboard",
+            lambda r: json.loads(r).get("total_novels", 0) > 0
+        ))
+
+        # 2. 任务分布和套餐分布
+        print("\n[2] 图表数据")
+        results.append(test_api(
+            ssh,
+            "任务类型分布",
+            "curl -s http://localhost:9000/api/admin/dashboard/task-distribution",
+            lambda r: len(json.loads(r)) > 0
+        ))
+        results.append(test_api(
+            ssh,
+            "套餐分布",
+            "curl -s http://localhost:9000/api/admin/dashboard/subscription-distribution",
+            lambda r: len(json.loads(r)) > 0
+        ))
+
+        # 3. 用户管理
+        print("\n[3] 用户管理")
+        results.append(test_api(
+            ssh,
+            "用户列表",
+            "curl -s 'http://localhost:9000/api/admin/users?page=1&page_size=10'",
+            lambda r: json.loads(r).get("total", 0) > 0
+        ))
+
+        # 4. 小说管理
+        print("\n[4] 小说管理")
+        results.append(test_api(
+            ssh,
+            "小说列表",
+            "curl -s 'http://localhost:9000/api/admin/novels?page=1&page_size=10'",
+            lambda r: json.loads(r).get("total", 0) > 0
+        ))
+
+        # 5. 视频管理
+        print("\n[5] 视频管理")
+        results.append(test_api(
+            ssh,
+            "视频列表",
+            "curl -s 'http://localhost:9000/api/admin/videos?page=1&page_size=10'",
+            lambda r: json.loads(r).get("total", 0) > 0
+        ))
+
+        # 6. 系统配置保存
+        print("\n[6] 系统配置")
+        results.append(test_api(
+            ssh,
+            "配置保存API",
+            "curl -s -X PUT http://localhost:9000/api/admin/config -H 'Content-Type: application/json' -d '{\"key\":\"api_keys\",\"value\":{\"openai_api_key\":\"test\"},\"description\":\"API密钥配置\"}'",
+            lambda r: "配置已更新" in r or "message" in r
+        ))
+
+        # 7. 用户端登录
+        print("\n[7] 用户端登录")
+        login_result = test_api(
+            ssh,
+            "登录接口",
+            "curl -s -X POST http://localhost:9000/api/auth/login -H 'Content-Type: application/json' -d '{\"username\":\"admin\",\"password\":\"198964\"}'",
+            lambda r: "access_token" in r
+        )
+        results.append(login_result)
+
+        if login_result:
+            # 获取token并测试用户资料
+            stdin, stdout, stderr = ssh.exec_command(
+                "curl -s -X POST http://localhost:9000/api/auth/login -H 'Content-Type: application/json' -d '{\"username\":\"admin\",\"password\":\"198964\"}'"
+            )
+            token_data = json.loads(stdout.read().decode())
+            token = token_data.get("access_token")
+
+            results.append(test_api(
+                ssh,
+                "用户资料API",
+                f"curl -s http://localhost:9000/api/users/profile -H 'Authorization: Bearer {token}'",
+                lambda r: "username" in r
+            ))
+
+        # 8. 前端访问
+        print("\n[8] 前端访问")
+        results.append(test_api(
+            ssh,
+            "管理端前端",
+            "curl -s -I http://localhost/admin/",
+            lambda r: "200 OK" in r
+        ))
+        results.append(test_api(
+            ssh,
+            "用户端前端",
+            "curl -s -I http://localhost:8000/",
+            lambda r: "200 OK" in r
+        ))
+
+        # 汇总结果
+        print("\n" + "="*60)
+        print("验证结果汇总")
+        print("="*60)
+        passed = sum(results)
+        total = len(results)
+        print(f"\n通过: {passed}/{total}")
+
+        if passed == total:
+            print("\n[SUCCESS] 所有验证通过！")
+            print("\n可以访问以下地址进行最终确认:")
+            print(f"  管理端: http://{SERVER}/admin")
+            print(f"  用户端: http://{SERVER}:8000")
+            print(f"  登录账号: admin / 198964")
+            print("\n请在浏览器中验证:")
+            print("  1. Dashboard数据概览显示真实数据（不是0）")
+            print("  2. 任务分布饼图清晰可见（高度300px）")
+            print("  3. 套餐分布柱状图清晰可见（高度300px）")
+            print("  4. 用户管理、小说管理、视频管理显示真实数据")
+            print("  5. 系统配置页面底部有API密钥配置")
+            print("  6. 可以保存API密钥配置")
+            print("  7. 用户端可以登录")
+        else:
+            print("\n[WARNING] 部分验证失败，请检查上述失败项")
+
+    except Exception as e:
+        print(f"\n[ERROR] {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        ssh.close()
+
 if __name__ == "__main__":
-    success = main()
-    sys.exit(0 if success else 1)
+    main()

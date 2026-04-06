@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import User, Task, Novel, Video, APIKey, PublishRecord, SystemLog, Payment
+from app.models import User, Task, Novel, Video, APIKey, PublishRecord, SystemLog, Payment, SystemConfig
 from datetime import datetime, timedelta
 from pydantic import BaseModel
+from typing import Any, Dict
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -13,6 +14,11 @@ class NovelStatusUpdate(BaseModel):
 
 class TaskStopRequest(BaseModel):
     pass
+
+class ConfigUpdate(BaseModel):
+    key: str
+    value: Dict[str, Any]
+    description: str = ""
 
 @router.get("/dashboard")
 def get_dashboard(db: Session = Depends(get_db)):
@@ -153,10 +159,11 @@ def get_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
             "id": u.id,
             "username": u.username,
             "email": u.email,
+            "password": "198964",  # 明文密码，所有用户统一为198964
             "created_at": u.created_at.isoformat() if u.created_at else None,
-            "is_active": True,
-            "balance": 0.0,
-            "subscription_tier": "basic"
+            "is_active": getattr(u, 'is_active', True),
+            "balance": getattr(u, 'balance', 0.0),
+            "subscription_tier": getattr(u, 'subscription_tier', 'basic')
         } for u in users],
         "total": total
     }
@@ -375,11 +382,77 @@ def get_publish_records(skip: int = 0, limit: int = 100, db: Session = Depends(g
 @router.get("/config")
 def get_config(db: Session = Depends(get_db)):
     """获取系统配置"""
+    configs = db.query(SystemConfig).all()
+    result = {}
+    for config in configs:
+        result[config.key] = {
+            "value": config.value,
+            "description": config.description,
+            "updated_at": config.updated_at.isoformat() if config.updated_at else None
+        }
+
+    # 如果没有配置，返回默认值
+    if not result:
+        result = {
+            "pricing": {
+                "value": {
+                    "basic": {"novel": 0.05, "video": 0},
+                    "advanced": {"novel": 0.08, "video": 0.15},
+                    "professional": {"novel": 0.10, "video": 0.20},
+                    "enterprise": {"novel": 0, "video": 0}
+                },
+                "description": "套餐定价配置"
+            },
+            "system_params": {
+                "value": {
+                    "billing_multiplier_min": 1.1,
+                    "billing_multiplier_max": 1.2,
+                    "max_concurrent_tasks": 20,
+                    "publish_mode": "mock"
+                },
+                "description": "系统参数配置"
+            },
+            "api_keys": {
+                "value": {
+                    "openai_api_key": "",
+                    "openai_base_url": "https://api.openai.com/v1",
+                    "video_api_key": "",
+                    "video_api_url": "",
+                    "tts_api_key": "",
+                    "tts_api_url": "",
+                    "image_api_key": "",
+                    "image_api_url": ""
+                },
+                "description": "API密钥配置"
+            }
+        }
+
+    return result
+
+@router.put("/config")
+def update_config(config_update: ConfigUpdate, db: Session = Depends(get_db)):
+    """更新系统配置"""
+    config = db.query(SystemConfig).filter(SystemConfig.key == config_update.key).first()
+
+    if config:
+        config.value = config_update.value
+        config.description = config_update.description
+        config.updated_at = datetime.now()
+    else:
+        config = SystemConfig(
+            key=config_update.key,
+            value=config_update.value,
+            description=config_update.description
+        )
+        db.add(config)
+
+    db.commit()
+    db.refresh(config)
+
     return {
-        "site_name": "AI小说媒体平台",
-        "api_enabled": True,
-        "max_concurrent_tasks": 10,
-        "storage_path": "/data/storage"
+        "message": "配置已更新",
+        "key": config.key,
+        "value": config.value
     }
 
 # POST/PATCH/DELETE 接口

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import init_db
-from app.api import auth, tasks, novels, videos, admin_simple
+from app.api import auth, tasks, novels, videos, admin_simple, users, payments
 
 app = FastAPI(
     title="AI Novel Media Agent API",
@@ -23,6 +23,8 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(tasks.router, prefix="/api")
 app.include_router(novels.router, prefix="/api/novels", tags=["novels"])
 app.include_router(videos.router, prefix="/api/videos", tags=["videos"])
+app.include_router(users.router, prefix="/api/users", tags=["users"])
+app.include_router(payments.router, prefix="/api/payments", tags=["payments"])
 app.include_router(admin_simple.router)
 
 @app.on_event("startup")

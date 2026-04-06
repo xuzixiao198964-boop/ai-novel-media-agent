@@ -77,7 +77,7 @@ export default function Users() {
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">ID</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">用户名</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">邮箱</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">密码</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">套餐</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">余额</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">状态</th>
@@ -103,7 +103,7 @@ export default function Users() {
                   <tr key={user.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="px-4 py-3">{user.id}</td>
                     <td className="px-4 py-3 font-medium">{user.username}</td>
-                    <td className="px-4 py-3 text-gray-600">{user.email}</td>
+                    <td className="px-4 py-3 text-gray-600 font-mono text-xs">{user.password || '******'}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                         user.subscription_tier === 'enterprise' ? 'bg-red-100 text-red-700' :

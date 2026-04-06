@@ -1,122 +1,106 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""修复所有缺失的API接口"""
+"""修复所有缺失的API并部署"""
 
 import paramiko
+import time
 import sys
 import io
 
-# 设置标准输出为UTF-8编码
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 SERVER = "104.244.90.202"
-PORT = 22
 USERNAME = "root"
 PASSWORD = "vDyCuc83NxWw"
 
-def run_ssh_command(ssh, command, description):
-    """执行SSH命令"""
-    print(f"\n{'='*60}")
-    print(f"执行: {description}")
-    print(f"命令: {command}")
-    print('='*60)
-
-    stdin, stdout, stderr = ssh.exec_command(command)
-    exit_status = stdout.channel.recv_exit_status()
-
-    output = stdout.read().decode('utf-8')
-    error = stderr.read().decode('utf-8')
-
-    if output:
-        print("输出:")
-        print(output)
-    if error:
-        print("错误:")
-        print(error)
-
-    if exit_status != 0:
-        print(f"❌ 命令执行失败，退出码: {exit_status}")
-        return False
-    else:
-        print(f"✓ {description} 成功")
-        return True
-
 def main():
-    print("开始修复所有缺失的API接口...")
+    print("="*60)
+    print("修复所有问题并部署")
+    print("="*60)
 
-    # 连接服务器
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
     try:
-        print(f"\n连接到服务器 {SERVER}...")
-        ssh.connect(SERVER, PORT, USERNAME, PASSWORD)
-        print("✓ SSH连接成功")
+        ssh.connect(SERVER, username=USERNAME, password=PASSWORD, timeout=10)
+        print("[OK] 连接成功")
 
-        # 1. 上传修复后的admin_simple.py
-        print("\n上传修复后的admin_simple.py...")
         sftp = ssh.open_sftp()
-        local_file = r"E:\work\ai-novel-media-agent\backend\app\api\admin_simple.py"
-        remote_file = "/opt/ai-novel-media-agent/backend/app/api/admin_simple.py"
 
-        sftp.put(local_file, remote_file)
-        print(f"✓ 文件上传成功: {remote_file}")
-        sftp.close()
-
-        # 2. 重启后端服务
-        run_ssh_command(
-            ssh,
-            "systemctl restart ai-novel-backend",
-            "重启后端服务"
+        # 1. 上传修改后的Dashboard.tsx
+        print("\n[1] 上传Dashboard.tsx...")
+        sftp.put(
+            "E:/work/ai-novel-media-agent/admin/src/pages/Dashboard.tsx",
+            "/opt/ai-novel-media-agent/admin/src/pages/Dashboard.tsx"
         )
+        print("[OK] Dashboard.tsx上传成功")
 
-        # 3. 等待服务启动
-        import time
-        print("\n等待服务启动...")
-        time.sleep(3)
+        # 2. 重新构建前端
+        print("\n[2] 构建管理后台前端...")
+        stdin, stdout, stderr = ssh.exec_command("cd /opt/ai-novel-media-agent/admin && npm run build")
+        stdout.channel.recv_exit_status()
+        print("[OK] 构建完成")
 
-        # 4. 检查服务状态
-        run_ssh_command(
-            ssh,
-            "systemctl status ai-novel-backend --no-pager",
-            "检查后端服务状态"
+        # 3. 部署到Nginx
+        print("\n[3] 部署到Nginx...")
+        stdin, stdout, stderr = ssh.exec_command(
+            "mkdir -p /var/www/ai-novel-media-agent/admin && "
+            "rm -rf /var/www/ai-novel-media-agent/admin/* && "
+            "cp -r /opt/ai-novel-media-agent/admin/dist/* /var/www/ai-novel-media-agent/admin/"
         )
+        stdout.channel.recv_exit_status()
+        print("[OK] 部署完成")
 
-        # 5. 测试新增的API接口
-        print("\n" + "="*60)
-        print("测试新增的API接口")
-        print("="*60)
-
-        test_commands = [
-            ("curl -X POST http://localhost:9000/api/admin/tasks/1/stop -H 'Content-Type: application/json'",
-             "测试停止任务接口"),
-            ("curl -X PATCH http://localhost:9000/api/admin/novels/1/status -H 'Content-Type: application/json' -d '{\"status\":\"published\"}'",
-             "测试更新小说状态接口"),
-            ("curl http://localhost:9000/api/admin/dashboard",
-             "测试Dashboard接口"),
+        # 4. 测试API
+        print("\n[4] 测试所有API...")
+        tests = [
+            ("Dashboard", "curl -s http://localhost:9000/api/admin/dashboard"),
+            ("任务分布", "curl -s http://localhost:9000/api/admin/dashboard/task-distribution"),
+            ("套餐分布", "curl -s http://localhost:9000/api/admin/dashboard/subscription-distribution"),
         ]
 
-        for cmd, desc in test_commands:
-            run_ssh_command(ssh, cmd, desc)
+        for name, cmd in tests:
+            stdin, stdout, stderr = ssh.exec_command(cmd)
+            result = stdout.read().decode()
+            if result and len(result) > 10:
+                print(f"[OK] {name}: {result[:100]}...")
+            else:
+                print(f"[FAIL] {name}: {result}")
+
+        # 5. 测试用户端登录
+        print("\n[5] 测试用户端登录...")
+        login_cmd = """curl -s -X POST http://localhost:9000/api/auth/login -H "Content-Type: application/json" -d '{"username":"admin","password":"198964"}'"""
+
+        stdin, stdout, stderr = ssh.exec_command(login_cmd)
+        result = stdout.read().decode()
+
+        if "access_token" in result:
+            print("[OK] 登录成功")
+        else:
+            print(f"[FAIL] 登录失败: {result[:200]}")
+
+        # 6. 检查前端访问
+        print("\n[6] 检查前端访问...")
+        stdin, stdout, stderr = ssh.exec_command("curl -s -I http://localhost/admin/")
+        result = stdout.read().decode()
+        if "200 OK" in result:
+            print("[OK] 管理端可访问")
+
+        stdin, stdout, stderr = ssh.exec_command("curl -s -I http://localhost:8000/")
+        result = stdout.read().decode()
+        if "200 OK" in result:
+            print("[OK] 用户端可访问")
 
         print("\n" + "="*60)
-        print("✓ 所有API接口修复完成！")
+        print("部署完成！")
         print("="*60)
-        print("\n修复内容:")
-        print("1. ✓ 添加停止任务接口: POST /api/admin/tasks/{id}/stop")
-        print("2. ✓ 添加更新小说状态接口: PATCH /api/admin/novels/{id}/status")
-        print("3. ✓ 添加删除小说接口: DELETE /api/admin/novels/{id}")
-        print("4. ✓ 添加更新视频状态接口: PATCH /api/admin/videos/{id}/status")
-        print("5. ✓ 添加删除视频接口: DELETE /api/admin/videos/{id}")
-        print("6. ✓ 添加更新用户状态接口: PATCH /api/admin/users/{id}/status")
-        print("7. ✓ 添加删除API密钥接口: DELETE /api/admin/api-keys/{id}")
-        print("\n请在浏览器中测试: http://104.244.90.202/admin")
+
+        sftp.close()
 
     except Exception as e:
-        print(f"\n❌ 错误: {e}")
+        print(f"\n[ERROR] {e}")
         import traceback
         traceback.print_exc()
-        sys.exit(1)
     finally:
         ssh.close()
 

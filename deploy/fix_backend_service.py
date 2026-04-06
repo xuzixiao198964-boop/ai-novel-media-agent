@@ -1,91 +1,130 @@
 #!/usr/bin/env python3
-"""修复后端服务端口冲突"""
+# -*- coding: utf-8 -*-
+"""检查后端启动状态并修复"""
 
 import paramiko
 import sys
+import io
 import time
 
-SERVER = {
-    'host': '104.244.90.202',
-    'port': 22,
-    'username': 'root',
-    'password': 'vDyCuc83NxWw'
-}
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-def connect_ssh():
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(
-        hostname=SERVER['host'],
-        port=SERVER['port'],
-        username=SERVER['username'],
-        password=SERVER['password']
-    )
-    return client
+SERVER = "104.244.90.202"
+USERNAME = "root"
+PASSWORD = "vDyCuc83NxWw"
 
-def run_command(client, command):
-    stdin, stdout, stderr = client.exec_command(command)
-    exit_code = stdout.channel.recv_exit_status()
+def execute_ssh_command(ssh, command):
+    stdin, stdout, stderr = ssh.exec_command(command)
+    exit_status = stdout.channel.recv_exit_status()
     output = stdout.read().decode('utf-8')
     error = stderr.read().decode('utf-8')
-    return exit_code, output, error
+    return exit_status, output, error
 
 def main():
-    print("=" * 60)
-    print("修复后端服务")
-    print("=" * 60)
+    print("=" * 70)
+    print("检查并修复后端服务")
+    print("=" * 70)
 
-    client = connect_ssh()
+    try:
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(SERVER, username=USERNAME, password=PASSWORD)
 
-    # 查找占用 9000 端口的进程
-    print("\n[1/5] 查找占用 9000 端口的进程")
-    exit_code, output, error = run_command(client, 'lsof -i :9000 | grep LISTEN')
-    print(output)
+        # 1. 检查当前状态
+        print("\n【1】检查当前状态")
+        print("-" * 70)
+        check_status = """
+echo "进程状态:"
+ps aux | grep '[u]vicorn' || echo "无uvicorn进程"
 
-    # 杀掉所有占用 9000 端口的进程
-    print("\n[2/5] 停止所有占用 9000 端口的进程")
-    run_command(client, 'pkill -9 -f "uvicorn.*9000"')
-    run_command(client, 'fuser -k 9000/tcp')
-    time.sleep(2)
-    print("[OK] 已停止")
-
-    # 停止 systemd 服务
-    print("\n[3/5] 停止 systemd 服务")
-    run_command(client, 'systemctl stop ai-novel-media-agent')
-    time.sleep(2)
-    print("[OK] 已停止")
-
-    # 启动 systemd 服务
-    print("\n[4/5] 启动 systemd 服务")
-    run_command(client, 'systemctl start ai-novel-media-agent')
-    time.sleep(3)
-    print("[OK] 已启动")
-
-    # 检查服务状态
-    print("\n[5/5] 检查服务状态")
-    exit_code, output, error = run_command(client, 'systemctl status ai-novel-media-agent')
-    if 'active (running)' in output:
-        print("[OK] 服务运行正常")
-    else:
-        print("[FAIL] 服务启动失败")
+echo ""
+echo "端口状态:"
+netstat -tlnp 2>/dev/null | grep 9000 || echo "9000端口未监听"
+"""
+        status, output, error = execute_ssh_command(ssh, check_status)
         print(output)
 
-    # 测试 API
-    print("\n[测试] 测试 API 健康检查")
-    time.sleep(2)
-    exit_code, output, error = run_command(client, 'curl -s http://localhost:9000/api/health')
-    print(f"响应: {output}")
+        # 2. 启动后端服务
+        print("\n【2】启动后端服务")
+        print("-" * 70)
+        start_backend = """
+cd /opt/ai-novel-media-agent/backend
 
-    # 测试登录
-    print("\n[测试] 测试登录 API")
-    exit_code, output, error = run_command(client, '''curl -s -X POST http://localhost:9000/api/auth/login -H "Content-Type: application/json" -d '{"username":"15606537209","password":"198964"}' ''')
-    print(f"响应: {output}")
+# 确保日志目录存在
+mkdir -p logs
 
-    client.close()
+# 启动服务
+nohup python3 -m uvicorn app.main:app --host 0.0.0.0 --port 9000 > logs/app.log 2>&1 &
 
-    print("\n" + "=" * 60)
-    print("修复完成")
-    print("=" * 60)
+# 等待启动
+sleep 5
 
-if __name__ == '__main__':
+echo "进程状态:"
+ps aux | grep '[u]vicorn'
+
+echo ""
+echo "端口状态:"
+netstat -tlnp 2>/dev/null | grep 9000
+"""
+        status, output, error = execute_ssh_command(ssh, start_backend)
+        print(output)
+
+        # 3. 检查启动日志
+        print("\n【3】检查启动日志")
+        print("-" * 70)
+        check_log = """
+echo "最近的日志:"
+tail -30 /opt/ai-novel-media-agent/backend/logs/app.log
+"""
+        status, output, error = execute_ssh_command(ssh, check_log)
+        print(output)
+
+        # 4. 测试API
+        print("\n【4】测试API")
+        print("-" * 70)
+        test_api = """
+echo "健康检查:"
+curl -s http://localhost:9000/api/health
+
+echo ""
+echo ""
+echo "Dashboard API:"
+curl -s http://localhost:9000/api/admin/dashboard | python3 -m json.tool
+
+echo ""
+echo "最近用户API:"
+curl -s http://localhost:9000/api/admin/dashboard/recent-users?limit=5 | python3 -m json.tool
+"""
+        status, output, error = execute_ssh_command(ssh, test_api)
+        print(output)
+
+        # 5. 测试前端访问
+        print("\n【5】测试前端访问")
+        print("-" * 70)
+        test_frontend = """
+echo "管理后台:"
+curl -s -o /dev/null -w "HTTP %{http_code}\n" http://localhost/admin/
+
+echo ""
+echo "API文档:"
+curl -s -o /dev/null -w "HTTP %{http_code}\n" http://localhost:9000/docs
+"""
+        status, output, error = execute_ssh_command(ssh, test_frontend)
+        print(output)
+
+        ssh.close()
+
+        print("\n" + "=" * 70)
+        print("检查完成")
+        print("=" * 70)
+        print("\n如果API正常返回数据，说明服务已恢复")
+        print("访问地址: http://104.244.90.202/admin")
+        print("登录账号: admin / 198964")
+
+    except Exception as e:
+        print(f"错误: {e}")
+        import traceback
+        traceback.print_exc()
+
+if __name__ == "__main__":
     main()

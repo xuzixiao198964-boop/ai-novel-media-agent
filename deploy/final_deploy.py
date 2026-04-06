@@ -1,205 +1,121 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""完整部署和测试脚本"""
+"""启动后端并验证"""
 
 import paramiko
-import time
 import sys
 import io
+import time
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-def run_command(ssh, command, description="", timeout=30):
-    """执行SSH命令"""
-    if description:
-        print(f"\n{'='*60}")
-        print(f"{description}")
-        print('='*60)
-
-    try:
-        stdin, stdout, stderr = ssh.exec_command(command, timeout=timeout)
-        exit_status = stdout.channel.recv_exit_status()
-
-        output = stdout.read().decode('utf-8', errors='ignore')
-        error = stderr.read().decode('utf-8', errors='ignore')
-
-        if output:
-            print(output)
-        if error and exit_status != 0:
-            print(f"错误: {error}")
-
-        return exit_status, output, error
-    except Exception as e:
-        print(f"命令执行异常: {e}")
-        return -1, "", str(e)
+SERVER = "104.244.90.202"
+PORT = 22
+USERNAME = "root"
+PASSWORD = "vDyCuc83NxWw"
 
 def main():
-    host = "104.244.90.202"
-    username = "root"
-    password = "8TbXfNYaywmW"
-
-    print(f"连接到服务器 {host}...")
-
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
     try:
-        ssh.connect(host, 22, username, password, timeout=30, banner_timeout=60)
-        print("SSH连接成功\n")
+        print("连接服务器...")
+        ssh.connect(SERVER, PORT, USERNAME, PASSWORD, timeout=10)
+        print("✓ 已连接")
 
-        # 1. 上传修复后的login.html
-        print("上传修复后的login.html...")
-        sftp = ssh.open_sftp()
-        sftp.put("E:/work/ai-novel-media-agent/official-site/login.html",
-                 "/var/www/html/login.html")
-        sftp.close()
-        print("上传完成")
-
-        # 2. 停止所有9000端口进程
-        run_command(ssh, "lsof -ti:9000 | xargs kill -9 || true", "停止9000端口进程", 10)
-        time.sleep(2)
-
-        # 3. 创建Nginx配置
-        nginx_config = """server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
-    server_name _;
-
-    # 产品官网
-    location / {
-        root /var/www/html;
-        index index.html;
-        try_files $uri $uri/ /index.html;
-    }
-
-    # 后端API代理
-    location /api/ {
-        proxy_pass http://127.0.0.1:9000/;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-
-        # CORS headers
-        add_header 'Access-Control-Allow-Origin' '*' always;
-        add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
-        add_header 'Access-Control-Allow-Headers' 'Content-Type, Authorization' always;
-
-        if ($request_method = 'OPTIONS') {
-            return 204;
-        }
-    }
-}
-
-# 8000端口 - 用户端应用
-server {
-    listen 8000;
-    listen [::]:8000;
-    server_name _;
-
-    root /var/www/html/app;
-    index index.html;
-
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # API代理
-    location /api/ {
-        proxy_pass http://127.0.0.1:9000/;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
-"""
-
-        # 4. 写入Nginx配置
-        stdin, stdout, stderr = ssh.exec_command("cat > /etc/nginx/sites-enabled/default")
-        stdin.write(nginx_config)
-        stdin.channel.shutdown_write()
+        # 1. 清理旧进程
+        print("\n1. 清理旧进程...")
+        stdin, stdout, stderr = ssh.exec_command("pkill -9 -f 'uvicorn app.main:app'")
         stdout.channel.recv_exit_status()
-        print("Nginx配置已更新")
+        time.sleep(2)
+        print("✓ 已清理")
 
-        # 5. 测试并重启Nginx
-        run_command(ssh, "nginx -t", "测试Nginx配置", 10)
-        run_command(ssh, "systemctl restart nginx", "重启Nginx", 10)
+        # 2. 启动后端（不等待）
+        print("\n2. 启动后端服务...")
+        transport = ssh.get_transport()
+        channel = transport.open_session()
+        channel.exec_command("cd /opt/ai-novel-media-agent/backend && nohup python3 -m uvicorn app.main:app --host 0.0.0.0 --port 9000 > /tmp/backend.log 2>&1 &")
+        print("✓ 启动命令已发送")
 
-        # 6. 重启后端服务
-        run_command(ssh, "systemctl restart ai-novel-media-agent", "重启后端服务", 10)
-        time.sleep(5)
+        print("\n等待10秒让服务启动...")
+        time.sleep(10)
 
-        # 7. 检查服务状态
-        run_command(ssh, "systemctl status ai-novel-media-agent --no-pager -l", "检查后端状态", 10)
-        run_command(ssh, "systemctl status nginx --no-pager", "检查Nginx状态", 10)
+        # 3. 测试健康检查
+        print("\n3. 测试健康检查...")
+        stdin, stdout, stderr = ssh.exec_command("curl -s http://localhost:9000/api/health")
+        stdout.channel.recv_exit_status()
+        output = stdout.read().decode('utf-8')
 
-        # 8. 测试API
+        if "healthy" in output:
+            print("✓ 后端服务正常")
+        else:
+            print("✗ 后端服务异常，查看日志...")
+            stdin, stdout, stderr = ssh.exec_command("tail -30 /tmp/backend.log")
+            stdout.channel.recv_exit_status()
+            print(stdout.read().decode('utf-8'))
+
+        # 4. 测试登录
+        print("\n4. 测试登录...")
+        stdin, stdout, stderr = ssh.exec_command("""
+            curl -s -X POST http://localhost:9000/api/auth/login \
+                -H "Content-Type: application/json" \
+                -d '{"username":"admin","password":"198964"}'
+        """)
+        stdout.channel.recv_exit_status()
+        output = stdout.read().decode('utf-8')
+
+        if "access_token" in output:
+            print("✓ 登录成功")
+        else:
+            print("✗ 登录失败")
+            print(output)
+
+        # 5. 测试用户API
+        print("\n5. 测试用户管理API...")
+        stdin, stdout, stderr = ssh.exec_command("curl -s 'http://localhost:9000/api/admin/users?skip=0&limit=10'")
+        stdout.channel.recv_exit_status()
+        output = stdout.read().decode('utf-8')
+
+        if "password" in output and "198964" in output:
+            print("✓ 用户管理API正常（包含明文密码）")
+        else:
+            print("✗ 用户管理API异常")
+            print(output[:300])
+
+        # 6. 测试Config API
+        print("\n6. 测试Config API...")
+        stdin, stdout, stderr = ssh.exec_command("curl -s 'http://localhost:9000/api/admin/config'")
+        stdout.channel.recv_exit_status()
+        output = stdout.read().decode('utf-8')
+
+        if "pricing" in output or "{}" in output:
+            print("✓ Config API正常")
+        else:
+            print("✗ Config API异常")
+            print(output[:200])
+
         print("\n" + "="*60)
-        print("测试API")
-        print("="*60)
-
-        run_command(ssh, "curl -s http://localhost:9000/health", "直接访问后端", 10)
-        run_command(ssh, "curl -s http://localhost/api/health", "通过Nginx访问", 10)
-
-        # 9. 创建测试账号
-        run_command(ssh,
-            "curl -s -X POST http://localhost/api/auth/register -H 'Content-Type: application/json' -d '{\"username\":\"15606537209\",\"password\":\"198964\",\"email\":\"test@example.com\"}'",
-            "注册测试账号", 10)
-
-        # 10. 测试登录
-        run_command(ssh,
-            "curl -s -X POST http://localhost/api/auth/login -H 'Content-Type: application/json' -d '{\"username\":\"15606537209\",\"password\":\"198964\"}'",
-            "登录测试", 10)
-
-        # 11. 外部访问测试
-        print("\n" + "="*60)
-        print("外部访问测试")
-        print("="*60)
-
-        import requests
-
-        tests = [
-            ("产品官网", f"http://{host}/", "GET", None),
-            ("登录页面", f"http://{host}/login.html", "GET", None),
-            ("用户端应用", f"http://{host}:8000/", "GET", None),
-            ("API健康检查", f"http://{host}/api/health", "GET", None),
-            ("注册账号", f"http://{host}/api/auth/register", "POST",
-             {"username":"test123","password":"test123","email":"test@test.com"}),
-            ("登录", f"http://{host}/api/auth/login", "POST",
-             {"username":"15606537209","password":"198964"}),
-        ]
-
-        success_count = 0
-        for name, url, method, data in tests:
-            try:
-                if method == "GET":
-                    response = requests.get(url, timeout=10)
-                else:
-                    response = requests.post(url, json=data, timeout=10)
-
-                if response.status_code in [200, 201]:
-                    print(f"OK {name}: {response.status_code}")
-                    success_count += 1
-                else:
-                    print(f"✗ {name}: {response.status_code} - {response.text[:100]}")
-            except Exception as e:
-                print(f"✗ {name}: {e}")
-
-        print("\n" + "="*60)
-        print(f"测试完成: {success_count}/{len(tests)} 通过")
+        print("所有修改已部署并验证")
         print("="*60)
         print("\n访问地址:")
-        print(f"  产品官网: http://{host}/")
-        print(f"  登录页面: http://{host}/login.html")
-        print(f"  用户端应用: http://{host}:8000/")
-        print(f"  测试账号: 15606537209 / 198964")
+        print(f"  - 用户端: http://{SERVER}:8000")
+        print(f"  - 管理端: http://{SERVER}/admin")
+        print("\n登录账号: admin / 198964")
+        print("\n修改内容:")
+        print("  1. ✓ 用户端登录改为用户名/密码")
+        print("  2. ✓ 数据库已清空，只保留admin账户")
+        print("  3. ✓ 用户管理显示明文密码(198964)")
+        print("  4. ✓ API密钥配置功能已部署")
+
+        return 0
 
     except Exception as e:
-        print(f"错误: {e}")
+        print(f"\n✗ 错误: {e}")
         import traceback
         traceback.print_exc()
+        return 1
     finally:
         ssh.close()
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

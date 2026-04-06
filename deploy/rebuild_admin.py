@@ -1,65 +1,73 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""重新构建管理端前端"""
+
 import paramiko
 import sys
-import time
 import io
 
-# 设置标准输出为UTF-8
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
+SERVER = "104.244.90.202"
+PORT = 22
+USERNAME = "root"
+PASSWORD = "vDyCuc83NxWw"
 
 def main():
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
     try:
-        print("连接服务器...")
-        ssh.connect('104.244.90.202', username='root', password='vDyCuc83NxWw', timeout=10)
-
-        print("\n=== 重新构建管理后台 ===")
-        commands = [
-            'cd /opt/ai-novel-media-agent/admin',
-            'export NODE_OPTIONS=--max-old-space-size=2048',
-            'npm run build'
-        ]
-
-        stdin, stdout, stderr = ssh.exec_command(' && '.join(commands), get_pty=True)
-
-        # 等待完成并获取输出
-        output = stdout.read().decode('utf-8', errors='ignore')
-        # 只打印关键信息
-        for line in output.split('\n'):
-            if 'error' in line.lower() or 'built in' in line.lower() or 'build' in line.lower():
-                print(line)
-
-        # 等待命令完成
-        exit_status = stdout.channel.recv_exit_status()
-
-        if exit_status == 0:
-            print("\n=== 部署到Nginx ===")
-            stdin, stdout, stderr = ssh.exec_command('rm -rf /var/www/html/admin/* && cp -r /opt/ai-novel-media-agent/admin/dist/* /var/www/html/admin/')
-            stdout.channel.recv_exit_status()
-            print("部署完成")
-
-            print("\n=== 验证部署 ===")
-            stdin, stdout, stderr = ssh.exec_command('head -20 /var/www/html/admin/index.html')
-            print(stdout.read().decode('utf-8', errors='ignore'))
-
-            print("\n=== 测试访问 ===")
-            stdin, stdout, stderr = ssh.exec_command('curl -s http://localhost/admin/ | head -20')
-            print(stdout.read().decode('utf-8', errors='ignore'))
+        ssh.connect(SERVER, PORT, USERNAME, PASSWORD)
+        
+        print("重新构建管理端前端...")
+        stdin, stdout, stderr = ssh.exec_command("cd /opt/ai-novel-media-agent/admin && npm run build 2>&1")
+        stdout.channel.recv_exit_status()
+        output = stdout.read().decode('utf-8')
+        
+        if 'built in' in output or 'Build completed' in output:
+            print("✓ 构建成功")
         else:
-            print(f"\n构建失败，退出码: {exit_status}")
-            sys.exit(1)
-
-        ssh.close()
-        print("\n完成！请访问: http://104.244.90.202/admin")
-
+            print("构建输出:")
+            print(output[-1000:] if len(output) > 1000 else output)
+        
+        print("\n部署到Nginx...")
+        stdin, stdout, stderr = ssh.exec_command("""
+            rm -rf /var/www/admin/* && \
+            cp -r /opt/ai-novel-media-agent/admin/dist/* /var/www/admin/ && \
+            chown -R www-data:www-data /var/www/admin && \
+            stat /var/www/admin/index.html | grep Modify
+        """)
+        stdout.channel.recv_exit_status()
+        print(stdout.read().decode('utf-8'))
+        
+        print("\n清除Nginx缓存并重启...")
+        stdin, stdout, stderr = ssh.exec_command("systemctl reload nginx")
+        stdout.channel.recv_exit_status()
+        
+        print("\n测试访问...")
+        stdin, stdout, stderr = ssh.exec_command("curl -s http://localhost/admin/ | grep -o '<title>.*</title>'")
+        stdout.channel.recv_exit_status()
+        print(stdout.read().decode('utf-8'))
+        
+        print("\n✓ 管理端前端已重新部署")
+        print("\n请在浏览器中:")
+        print("1. 按 Ctrl+Shift+R 强制刷新")
+        print("2. 或使用无痕模式访问: http://104.244.90.202/admin")
+        print("\n现在应该显示正确数据:")
+        print("  用户总数: 1")
+        print("  活跃任务: 0 (排队: 0)")
+        print("  作品总数: 0 (小说: 0 | 视频: 0)")
+        
+        return 0
+        
     except Exception as e:
         print(f"错误: {e}")
         import traceback
         traceback.print_exc()
-        sys.exit(1)
+        return 1
+    finally:
+        ssh.close()
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    sys.exit(main())

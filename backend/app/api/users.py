@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_db
-from app.models import User, UserPackage, Package
+from app.models import User
 from app.core.deps import get_current_user
 
 router = APIRouter()
@@ -62,11 +62,33 @@ async def list_packages(
     db: AsyncSession = Depends(get_db)
 ):
     """获取所有套餐"""
-    result = await db.execute(
-        select(Package).where(Package.is_active == True).order_by(Package.sort_order)
-    )
-    packages = result.scalars().all()
-
+    # 返回固定的套餐列表
+    packages = [
+        {
+            "id": 1,
+            "name": "基础版",
+            "price": 99.0,
+            "duration_days": 30,
+            "features": ["每日10次小说生成", "每日5次视频生成", "基础模板"],
+            "is_active": True
+        },
+        {
+            "id": 2,
+            "name": "专业版",
+            "price": 299.0,
+            "duration_days": 30,
+            "features": ["每日50次小说生成", "每日20次视频生成", "高级模板", "优先处理"],
+            "is_active": True
+        },
+        {
+            "id": 3,
+            "name": "企业版",
+            "price": 999.0,
+            "duration_days": 30,
+            "features": ["无限小说生成", "无限视频生成", "全部模板", "专属客服"],
+            "is_active": True
+        }
+    ]
     return {"items": packages}
 
 
@@ -76,26 +98,10 @@ async def get_current_package(
     db: AsyncSession = Depends(get_db)
 ):
     """获取当前套餐"""
-    result = await db.execute(
-        select(UserPackage).where(
-            UserPackage.user_id == current_user.id,
-            UserPackage.status == "active"
-        ).order_by(UserPackage.started_at.desc())
-    )
-    user_package = result.scalar_one_or_none()
-
-    if not user_package:
-        return {"message": "未订阅套餐"}
-
-    # 获取套餐详情
-    package_result = await db.execute(
-        select(Package).where(Package.id == user_package.package_id)
-    )
-    package = package_result.scalar_one_or_none()
-
+    # 返回用户的订阅等级
     return {
-        "user_package": user_package,
-        "package": package
+        "subscription_tier": current_user.subscription_tier,
+        "message": "当前套餐信息"
     }
 
 
@@ -106,18 +112,5 @@ async def subscribe_package(
     db: AsyncSession = Depends(get_db)
 ):
     """订阅套餐"""
-    # 验证套餐存在
-    result = await db.execute(
-        select(Package).where(Package.id == package_id, Package.is_active == True)
-    )
-    package = result.scalar_one_or_none()
-
-    if not package:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="套餐不存在"
-        )
-
     # TODO: 实现套餐订阅逻辑（支付、创建订阅记录等）
-
     return {"message": "套餐订阅成功"}

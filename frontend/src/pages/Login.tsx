@@ -5,7 +5,7 @@ import { useAuthStore } from '@/store/authStore'
 const Login = () => {
   const navigate = useNavigate()
   const { login, isLoading } = useAuthStore()
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
 
@@ -14,10 +14,10 @@ const Login = () => {
     setError('')
 
     try {
-      await login(email, password)
+      await login(username, password)
       navigate('/')
     } catch (err: any) {
-      setError(err.response?.data?.message || '登录失败，请检查邮箱和密码')
+      setError(err.response?.data?.message || '登录失败，请检查用户名和密码')
     }
   }
 
@@ -41,12 +41,12 @@ const Login = () => {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>邮箱</label>
+            <label>用户名</label>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="请输入邮箱"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="请输入用户名"
               required
             />
           </div>

@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 
 from app.database import get_db
-from app.models import User, Payment, PaymentStatus
+from app.models import User, Payment
 from app.core.deps import get_current_user
 
 router = APIRouter()
@@ -36,9 +36,9 @@ async def create_recharge(
     payment = Payment(
         user_id=current_user.id,
         amount=amount,
-        method=method,
-        status=PaymentStatus.PENDING,
-        out_trade_no=f"recharge_{uuid.uuid4().hex[:16]}"
+        payment_method=method,
+        status="pending",
+        transaction_id=f"recharge_{uuid.uuid4().hex[:16]}"
     )
 
     db.add(payment)
@@ -49,9 +49,9 @@ async def create_recharge(
 
     return {
         "payment_id": payment.id,
-        "out_trade_no": payment.out_trade_no,
+        "transaction_id": payment.transaction_id,
         "amount": payment.amount,
-        "method": payment.method,
+        "method": payment.payment_method,
         "pay_url": "https://example.com/pay",  # 实际支付链接
         "qr_code": "https://example.com/qr"  # 二维码
     }
@@ -87,23 +87,36 @@ async def payment_history(
     return {"total": len(payments), "items": payments}
 
 
-@router.get("/consumptions")
-async def consumption_history(
-    skip: int = 0,
-    limit: int = 20,
-    current_user: User = Depends(get_current_user),
+@router.get("/packages")
+async def get_packages(
     db: AsyncSession = Depends(get_db)
 ):
-    """获取消费记录"""
-    from app.models import Consumption
+    """获取套餐列表"""
+    packages = [
+        {
+            "id": 1,
+            "name": "基础版",
+            "price": 99.0,
+            "duration_days": 30,
+            "features": ["每日10次小说生成", "每日5次视频生成", "基础模板"],
+            "is_active": True
+        },
+        {
+            "id": 2,
+            "name": "专业版",
+            "price": 299.0,
+            "duration_days": 30,
+            "features": ["每日50次小说生成", "每日20次视频生成", "高级模板", "优先处理"],
+            "is_active": True
+        },
+        {
+            "id": 3,
+            "name": "企业版",
+            "price": 999.0,
+            "duration_days": 30,
+            "features": ["无限小说生成", "无限视频生成", "全部模板", "专属客服"],
+            "is_active": True
+        }
+    ]
+    return {"items": packages}
 
-    result = await db.execute(
-        select(Consumption)
-        .where(Consumption.user_id == current_user.id)
-        .order_by(desc(Consumption.created_at))
-        .offset(skip)
-        .limit(limit)
-    )
-    consumptions = result.scalars().all()
-
-    return {"total": len(consumptions), "items": consumptions}
